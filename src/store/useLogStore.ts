@@ -18,6 +18,7 @@ interface LogState {
     operationType?: string;
     startDate?: string;
     endDate?: string;
+    keyword?: string;
   }) => Promise<PaginatedResponse<SystemLog>>;
 
   addLog: (data: Omit<SystemLog, 'logId' | 'operateTime'>) => void;
@@ -41,20 +42,42 @@ export const useLogStore = create<LogState>()(
         set({ loading: true });
         await new Promise((resolve) => setTimeout(resolve, 300));
 
-        const { page = 1, pageSize = 10, operatorId, operationType, startDate, endDate } = filters;
+        const operationTypeGroups: Record<string, string[]> = {
+          '审批相关': ['审核申请', '拒绝申请'],
+          '车位配置相关': ['新增停车区域', '修改停车区域', '删除停车区域'],
+          '扣费相关': ['费用扣除', '单条扣费', '批量扣费'],
+          '申请相关': ['提交申请', '审核申请', '拒绝申请'],
+          '车位相关': ['分配车位', '释放车位', '更新车位状态', '调整停车位'],
+          '出入相关': ['车辆入场', '车辆出场'],
+          '续期相关': ['续期申请', '续期提醒', '冻结通行权限'],
+        };
+
+        const { page = 1, pageSize = 10, operatorId, operationType, startDate, endDate, keyword } = filters;
         let filtered = [...get().allLogs];
 
         if (operatorId) {
           filtered = filtered.filter((l) => l.operatorId === operatorId);
         }
         if (operationType && operationType !== 'all') {
-          filtered = filtered.filter((l) => l.operationType === operationType);
+          if (operationTypeGroups[operationType]) {
+            filtered = filtered.filter((l) => operationTypeGroups[operationType].includes(l.operationType));
+          } else {
+            filtered = filtered.filter((l) => l.operationType === operationType);
+          }
         }
         if (startDate) {
           filtered = filtered.filter((l) => l.operateTime >= startDate);
         }
         if (endDate) {
           filtered = filtered.filter((l) => l.operateTime <= endDate + ' 23:59:59');
+        }
+        if (keyword) {
+          const kw = keyword.toLowerCase();
+          filtered = filtered.filter((l) =>
+            l.operatorName.toLowerCase().includes(kw) ||
+            l.operatorId.toLowerCase().includes(kw) ||
+            l.detail.toLowerCase().includes(kw)
+          );
         }
 
         const total = filtered.length;

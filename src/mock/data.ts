@@ -145,23 +145,51 @@ export const mockExpenses: Expense[] = generateExpenses();
 const generateSystemLogs = (): SystemLog[] => {
   const logs: SystemLog[] = [];
   const operations = [
-    { type: 'login', detail: '用户登录系统' },
-    { type: 'application_submit', detail: '提交车辆通行证申请' },
-    { type: 'application_approve', detail: '审批通过通行证申请' },
-    { type: 'application_reject', detail: '拒绝通行证申请' },
-    { type: 'parking_assign', detail: '分配停车位' },
-    { type: 'parking_adjust', detail: '调整停车位' },
-    { type: 'renewal_reminder', detail: '发送续期提醒' },
-    { type: 'permission_freeze', detail: '冻结通行权限' },
-    { type: 'fee_deduction', detail: '执行费用扣除' },
-    { type: 'export_excel', detail: '导出Excel报表' },
-    { type: 'export_pdf', detail: '导出PDF报表' },
-    { type: 'system_config', detail: '修改系统配置' },
+    { type: '用户登录', detail: '用户登录系统' },
+    { type: '提交申请', detail: '提交车辆通行证申请' },
+    { type: '审核申请', detail: '审批通过通行证申请' },
+    { type: '拒绝申请', detail: '拒绝通行证申请' },
+    { type: '分配车位', detail: '分配停车位' },
+    { type: '调整停车位', detail: '调整停车位' },
+    { type: '续期提醒', detail: '发送续期提醒' },
+    { type: '冻结通行权限', detail: '冻结通行权限' },
+    { type: '费用扣除', detail: '执行费用扣除' },
+    { type: '导出报表', detail: '导出Excel报表' },
+    { type: '导出报表', detail: '导出PDF报表' },
+    { type: '修改系统配置', detail: '修改系统配置' },
   ];
+
+  const getExtraFields = (type: string, index: number): { targetType: string; targetId: string; resultStatus: string; remark?: string } => {
+    switch (type) {
+      case '审核申请':
+      case '拒绝申请':
+        return { targetType: 'application', targetId: `APP${String((index % 25) + 1).padStart(6, '0')}`, resultStatus: 'success' };
+      case '提交申请':
+        return { targetType: 'application', targetId: `APP${String((index % 25) + 1).padStart(6, '0')}`, resultStatus: 'success' };
+      case '新增停车区域':
+      case '修改停车区域':
+      case '删除停车区域':
+        return { targetType: 'parkingZone', targetId: `ZONE${String((index % 10) + 1).padStart(4, '0')}`, resultStatus: 'success' };
+      case '费用扣除':
+      case '单条扣费':
+      case '批量扣费':
+        return { targetType: 'expense', targetId: `EXP${String((index % 30) + 1).padStart(6, '0')}`, resultStatus: 'success' };
+      case '分配车位':
+        return { targetType: 'parkingSpace', targetId: `SP${String((index % 170) + 1).padStart(4, '0')}`, resultStatus: 'success' };
+      case '车辆入场':
+      case '车辆出场':
+        return { targetType: 'accessRecord', targetId: `REC${String((index % 100) + 1).padStart(6, '0')}`, resultStatus: 'success' };
+      case '用户登录':
+        return { targetType: 'system', targetId: '', resultStatus: 'success', remark: '登录成功' };
+      default:
+        return { targetType: 'system', targetId: '', resultStatus: 'success' };
+    }
+  };
 
   for (let i = 0; i < 80; i++) {
     const op = operations[i % operations.length];
     const emp = mockEmployees[i % mockEmployees.length];
+    const extra = getExtraFields(op.type, i);
     logs.push({
       logId: `LOG${String(i + 1).padStart(8, '0')}`,
       operatorId: emp.employeeId,
@@ -173,6 +201,10 @@ const generateSystemLogs = (): SystemLog[] => {
         String(Math.floor(Math.random() * 60)).padStart(2, '0'),
       detail: op.detail,
       ipAddress: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+      targetId: extra.targetId,
+      targetType: extra.targetType,
+      resultStatus: extra.resultStatus,
+      remark: extra.remark,
     });
   }
   return logs.sort((a, b) => new Date(b.operateTime).getTime() - new Date(a.operateTime).getTime());

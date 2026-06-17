@@ -73,6 +73,7 @@ export default function ApplicationList() {
     };
     if (filters.status !== 'all') apiFilters.status = filters.status;
     if (filters.employeeId) apiFilters.employeeId = filters.employeeId;
+    if (filters.plateNumber) apiFilters.plateNumber = filters.plateNumber;
 
     await fetchAllApplications(apiFilters);
   };
@@ -90,8 +91,12 @@ export default function ApplicationList() {
     addLog({
       operatorId: currentUser.employeeId,
       operatorName: currentUser.name,
-      operationType: '审批通过',
+      operationType: '审核申请',
       detail: `通过通行证申请 ${selectedApp.applicationId}`,
+      targetId: selectedApp.applicationId,
+      targetType: 'application',
+      resultStatus: 'success',
+      remark: `审批通过申请 ${selectedApp.applicationId}`,
     });
 
     if (result && result.parkingZoneName && result.parkingSpaceNumber) {
@@ -100,6 +105,10 @@ export default function ApplicationList() {
         operatorName: currentUser.name,
         operationType: '分配车位',
         detail: `分配车位 ${result.parkingZoneName} ${result.parkingSpaceNumber} 给申请 ${selectedApp.applicationId}`,
+        targetId: selectedApp.applicationId,
+        targetType: 'application',
+        resultStatus: 'success',
+        remark: `分配车位 ${result.parkingZoneName} ${result.parkingSpaceNumber}`,
       });
     }
 
@@ -115,8 +124,12 @@ export default function ApplicationList() {
     addLog({
       operatorId: currentUser.employeeId,
       operatorName: currentUser.name,
-      operationType: '审批拒绝',
+      operationType: '拒绝申请',
       detail: `拒绝通行证申请 ${selectedApp.applicationId}，原因：${rejectReason}`,
+      targetId: selectedApp.applicationId,
+      targetType: 'application',
+      resultStatus: 'success',
+      remark: `拒绝原因：${rejectReason}`,
     });
 
     setShowRejectModal(false);
@@ -154,15 +167,20 @@ export default function ApplicationList() {
   };
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
   };
 
-  const filteredData = currentData.filter(app => {
-    if (filters.plateNumber && !app.plateNumber.includes(filters.plateNumber.toUpperCase())) {
-      return false;
-    }
-    return true;
-  });
+  const filteredData = currentData;
+
+  const handleReset = () => {
+    setFilters({
+      status: 'all',
+      employeeId: '',
+      plateNumber: '',
+      page: 1,
+      pageSize: 10,
+    });
+  };
 
   const statusOptions = [
     { value: 'all', label: '全部状态' },
@@ -243,13 +261,19 @@ export default function ApplicationList() {
               className="input"
             />
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end gap-2">
             <button
               onClick={handleSearch}
-              className="btn-primary flex items-center gap-2 w-full"
+              className="btn-primary flex items-center gap-2 flex-1"
             >
               <Search size={18} />
               搜索
+            </button>
+            <button
+              onClick={handleReset}
+              className="btn-secondary flex items-center gap-2"
+            >
+              重置
             </button>
           </div>
         </div>

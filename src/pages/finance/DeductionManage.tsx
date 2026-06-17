@@ -85,6 +85,10 @@ export default function DeductionManage() {
       operatorName: currentUser.name,
       operationType: '批量扣费',
       detail: `批量扣除${filters.month}月份停车费用，共${pendingExpenses.length}笔`,
+      targetId: pendingExpenses.map(e => e.expenseId).join(','),
+      targetType: 'expense',
+      resultStatus: 'success',
+      remark: `批量扣除${filters.month}月份费用，共${pendingExpenses.length}笔`,
     });
 
     loadExpenses();
@@ -99,6 +103,10 @@ export default function DeductionManage() {
       operatorName: currentUser.name,
       operationType: '单条扣费',
       detail: `扣除${selectedExpense.employeeName}的停车费用${formatCurrency(selectedExpense.amount)}`,
+      targetId: selectedExpense.expenseId,
+      targetType: 'expense',
+      resultStatus: 'success',
+      remark: `扣除费用 ${formatCurrency(selectedExpense.amount)}`,
     });
 
     setShowDeductModal(false);
@@ -115,6 +123,10 @@ export default function DeductionManage() {
       operatorName: currentUser.name,
       operationType: '费用减免',
       detail: `减免${selectedExpense.employeeName}的停车费用${formatCurrency(selectedExpense.amount)}，原因：${exemptReason}`,
+      targetId: selectedExpense.expenseId,
+      targetType: 'expense',
+      resultStatus: 'success',
+      remark: `减免原因：${exemptReason}`,
     });
 
     setShowExemptModal(false);

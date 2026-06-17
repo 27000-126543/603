@@ -117,6 +117,10 @@ export default function ParkingConfig() {
           operatorName: currentUser.name,
           operationType: '新增停车区域',
           detail: `新增停车区域 ${newZone.zoneName}，共 ${newZone.totalSpaces} 个车位`,
+          targetId: newZone.zoneId,
+          targetType: 'parkingZone',
+          resultStatus: 'success',
+          remark: `新增区域 ${newZone.zoneName}，${newZone.totalSpaces} 个车位`,
         });
       }
     } else if (editingZone) {
@@ -134,6 +138,10 @@ export default function ParkingConfig() {
           operatorName: currentUser.name,
           operationType: '修改停车区域',
           detail: `修改停车区域 ${updatedZone.zoneName} 配置`,
+          targetId: editingZone.zoneId,
+          targetType: 'parkingZone',
+          resultStatus: 'success',
+          remark: `修改区域 ${updatedZone.zoneName} 配置`,
         });
       }
     }
@@ -158,6 +166,10 @@ export default function ParkingConfig() {
         operatorName: currentUser.name,
         operationType: '删除停车区域',
         detail: `删除停车区域 ${zoneToDelete.zoneName}`,
+        targetId: zoneToDelete.zoneId,
+        targetType: 'parkingZone',
+        resultStatus: 'success',
+        remark: `删除区域 ${zoneToDelete.zoneName}`,
       });
     }
 

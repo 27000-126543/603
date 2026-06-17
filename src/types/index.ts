@@ -109,6 +109,10 @@ export interface SystemLog {
   operateTime: string;
   detail: string;
   ipAddress?: string;
+  targetId?: string;
+  targetType?: string;
+  resultStatus?: string;
+  remark?: string;
 }
 
 export type NotificationType = 'renewal' | 'approval' | 'parking' | 'overtime' | 'system';

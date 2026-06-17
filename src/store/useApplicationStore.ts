@@ -14,6 +14,7 @@ import { useParkingStore } from './useParkingStore';
 interface ApplicationState {
   myApplications: Application[];
   allApplications: Application[];
+  allApplicationsFull: Application[];
   waitingQueue: Application[];
   loading: boolean;
   error: string | null;
@@ -25,6 +26,7 @@ interface ApplicationState {
     pageSize?: number;
     status?: string;
     employeeId?: string;
+    plateNumber?: string;
   }) => Promise<PaginatedResponse<Application>>;
   fetchWaitingQueue: () => Promise<void>;
   submitApplication: (
@@ -42,6 +44,7 @@ export const useApplicationStore = create<ApplicationState>()(
     (set, get) => ({
       myApplications: [],
       allApplications: [],
+      allApplicationsFull: [...mockApplications],
       waitingQueue: [],
       loading: false,
       error: null,
@@ -51,26 +54,29 @@ export const useApplicationStore = create<ApplicationState>()(
         set({ loading: true });
         await new Promise((resolve) => setTimeout(resolve, 300));
         const state = get();
-        let myApps = state.allApplications.filter((a) => a.employeeId === employeeId);
-        if (myApps.length === 0) {
-          myApps = mockApplications.filter((a) => a.employeeId === employeeId);
+        let filtered = state.allApplicationsFull.filter((a) => a.employeeId === employeeId);
+        if (filtered.length === 0) {
+          filtered = mockApplications.filter((a) => a.employeeId === employeeId);
         }
-        set({ myApplications: myApps, loading: false });
+        set({ myApplications: filtered, loading: false });
       },
 
       fetchAllApplications: async (filters = {}) => {
         set({ loading: true });
         await new Promise((resolve) => setTimeout(resolve, 300));
 
-        const { page = 1, pageSize = 10, status, employeeId } = filters;
+        const { page = 1, pageSize = 10, status, employeeId, plateNumber } = filters;
         const state = get();
-        let filtered = state.allApplications.length > 0 ? [...state.allApplications] : [...mockApplications];
+        let filtered = [...state.allApplicationsFull];
 
-        if (status) {
+        if (status && status !== 'all') {
           filtered = filtered.filter((a) => a.status === status);
         }
         if (employeeId) {
           filtered = filtered.filter((a) => a.employeeId === employeeId);
+        }
+        if (plateNumber) {
+          filtered = filtered.filter((a) => a.plateNumber.includes(plateNumber.toUpperCase()));
         }
 
         const total = filtered.length;
@@ -154,6 +160,7 @@ export const useApplicationStore = create<ApplicationState>()(
         set((state) => ({
           myApplications: [application, ...state.myApplications],
           allApplications: [application, ...state.allApplications],
+          allApplicationsFull: [application, ...state.allApplicationsFull],
           loading: false,
         }));
 
@@ -226,6 +233,9 @@ export const useApplicationStore = create<ApplicationState>()(
           allApplications: state.allApplications.map((a) =>
             a.applicationId === id ? { ...app } : a
           ),
+          allApplicationsFull: state.allApplicationsFull.map((a) =>
+            a.applicationId === id ? { ...app } : a
+          ),
           loading: false,
         }));
 
@@ -244,6 +254,9 @@ export const useApplicationStore = create<ApplicationState>()(
 
         set((state) => ({
           allApplications: state.allApplications.map((a) =>
+            a.applicationId === id ? { ...a, status: 'rejected' as const, remark: reason } : a
+          ),
+          allApplicationsFull: state.allApplicationsFull.map((a) =>
             a.applicationId === id ? { ...a, status: 'rejected' as const, remark: reason } : a
           ),
           loading: false,
@@ -268,6 +281,9 @@ export const useApplicationStore = create<ApplicationState>()(
           allApplications: state.allApplications.map((a) =>
             a.applicationId === id ? { ...a, expireDate: newExpireDate, status: 'approved' as const } : a
           ),
+          allApplicationsFull: state.allApplicationsFull.map((a) =>
+            a.applicationId === id ? { ...a, expireDate: newExpireDate, status: 'approved' as const } : a
+          ),
           loading: false,
         }));
       },
@@ -282,6 +298,8 @@ export const useApplicationStore = create<ApplicationState>()(
       partialize: (state) => ({
         myApplications: state.myApplications,
         allApplications: state.allApplications,
+        allApplicationsFull: state.allApplicationsFull,
+        waitingQueue: state.waitingQueue,
       }),
     }
   )

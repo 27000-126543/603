@@ -18,6 +18,7 @@ interface AddExpenseRequest {
 
 interface FinanceState {
   expenses: Expense[];
+  expensesFull: Expense[];
   loading: boolean;
   error: string | null;
   total: number;
@@ -28,6 +29,7 @@ interface FinanceState {
     employeeId?: string;
     month?: string;
     status?: string;
+    plateNumber?: string;
   }) => Promise<PaginatedResponse<Expense>>;
 
   addExpense: (data: AddExpenseRequest) => Promise<Expense>;
@@ -48,6 +50,7 @@ export const useFinanceStore = create<FinanceState>()(
   persist(
     (set, get) => ({
       expenses: [],
+      expensesFull: [...mockExpenses],
       loading: false,
       error: null,
       total: 0,
@@ -56,9 +59,9 @@ export const useFinanceStore = create<FinanceState>()(
         set({ loading: true });
         await new Promise((resolve) => setTimeout(resolve, 300));
 
-        const { page = 1, pageSize = 10, employeeId, month, status } = filters;
+        const { page = 1, pageSize = 10, employeeId, month, status, plateNumber } = filters;
         const state = get();
-        let filtered = state.expenses.length > 0 ? [...state.expenses] : [...mockExpenses];
+        let filtered = [...state.expensesFull];
 
         if (employeeId) {
           filtered = filtered.filter((e) => e.employeeId === employeeId);
@@ -66,8 +69,11 @@ export const useFinanceStore = create<FinanceState>()(
         if (month) {
           filtered = filtered.filter((e) => e.salaryMonth === month);
         }
-        if (status) {
+        if (status && status !== 'all') {
           filtered = filtered.filter((e) => e.status === status);
+        }
+        if (plateNumber) {
+          filtered = filtered.filter((e) => e.plateNumber.includes(plateNumber.toUpperCase()));
         }
 
         filtered.sort((a, b) => new Date(b.deductionDate).getTime() - new Date(a.deductionDate).getTime());
@@ -107,6 +113,7 @@ export const useFinanceStore = create<FinanceState>()(
 
         set((state) => ({
           expenses: [expense, ...state.expenses],
+          expensesFull: [expense, ...state.expensesFull],
           loading: false,
         }));
 
@@ -125,6 +132,9 @@ export const useFinanceStore = create<FinanceState>()(
 
         set((state) => ({
           expenses: state.expenses.map((e) =>
+            e.expenseId === expenseId ? { ...e, status: 'deducted' as const, deductedTime: getCurrentTime() } : e
+          ),
+          expensesFull: state.expensesFull.map((e) =>
             e.expenseId === expenseId ? { ...e, status: 'deducted' as const, deductedTime: getCurrentTime() } : e
           ),
           loading: false,
@@ -148,6 +158,9 @@ export const useFinanceStore = create<FinanceState>()(
           expenses: state.expenses.map((e) =>
             expenseIds.includes(e.expenseId) ? { ...e, status: 'deducted' as const, deductedTime: now } : e
           ),
+          expensesFull: state.expensesFull.map((e) =>
+            expenseIds.includes(e.expenseId) ? { ...e, status: 'deducted' as const, deductedTime: now } : e
+          ),
           loading: false,
         }));
       },
@@ -169,6 +182,11 @@ export const useFinanceStore = create<FinanceState>()(
               ? { ...e, status: 'exempted' as const, exemptReason: reason, exemptTime: getCurrentTime() }
               : e
           ),
+          expensesFull: state.expensesFull.map((e) =>
+            e.expenseId === expenseId
+              ? { ...e, status: 'exempted' as const, exemptReason: reason, exemptTime: getCurrentTime() }
+              : e
+          ),
           loading: false,
         }));
       },
@@ -176,7 +194,7 @@ export const useFinanceStore = create<FinanceState>()(
       getMonthlySummary: (month?: string, employeeId?: string) => {
         const targetMonth = month || getCurrentMonth();
         const state = get();
-        let monthExpenses = state.expenses.length > 0 ? state.expenses : mockExpenses;
+        let monthExpenses = state.expensesFull;
         monthExpenses = monthExpenses.filter((e) => e.salaryMonth === targetMonth);
 
         if (employeeId) {
@@ -201,7 +219,7 @@ export const useFinanceStore = create<FinanceState>()(
       getDepartmentStats: () => {
         const deptMap = new Map<string, { count: number; amount: number }>();
         const state = get();
-        const allExpenses = state.expenses.length > 0 ? state.expenses : mockExpenses;
+        const allExpenses = state.expensesFull;
 
         allExpenses.forEach((expense) => {
           const record = mockAccessRecords.find((r) => r.recordId === expense.recordId);
@@ -225,6 +243,7 @@ export const useFinanceStore = create<FinanceState>()(
       name: 'finance-storage',
       partialize: (state) => ({
         expenses: state.expenses,
+        expensesFull: state.expensesFull,
       }),
     }
   )

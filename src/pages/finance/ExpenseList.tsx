@@ -39,6 +39,7 @@ export default function ExpenseList() {
   const [filters, setFilters] = useState({
     month: getCurrentMonth(),
     status: 'all',
+    plateNumber: '',
     page: 1,
     pageSize: 10,
   });
@@ -65,13 +66,26 @@ export default function ExpenseList() {
     if (filters.status !== 'all') {
       apiFilters.status = filters.status;
     }
+    if (filters.plateNumber) {
+      apiFilters.plateNumber = filters.plateNumber;
+    }
 
     await fetchExpenses(apiFilters);
   };
 
+  const handleReset = () => {
+    setFilters({
+      month: getCurrentMonth(),
+      status: 'all',
+      plateNumber: '',
+      page: 1,
+      pageSize: 10,
+    });
+  };
+
   const handleExport = () => {
     if (!currentUser) return;
-    const exportData = filteredData.map(expense => ({
+    const exportData = expenses.map(expense => ({
       '费用编号': expense.expenseId,
       '员工姓名': expense.employeeName,
       '员工工号': expense.employeeId,
@@ -186,7 +200,7 @@ export default function ExpenseList() {
               <p className="text-2xl font-bold text-danger-600">
                 {monthlySummary.totalCount > 0
                   ? formatDuration(Math.floor(
-                      filteredData.reduce((sum, e) => sum + e.overtimeMinutes, 0) /
+                      expenses.reduce((sum, e) => sum + e.overtimeMinutes, 0) /
                       monthlySummary.totalCount
                     ))
                   : '-'}
@@ -234,6 +248,26 @@ export default function ExpenseList() {
               <option value="deducted">已扣除</option>
               <option value="exempted">已减免</option>
             </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              车牌号
+            </label>
+            <input
+              type="text"
+              value={filters.plateNumber}
+              onChange={(e) => setFilters(prev => ({ ...prev, plateNumber: e.target.value, page: 1 }))}
+              placeholder="输入车牌号"
+              className="input w-36"
+            />
+          </div>
+          <div className="md:ml-auto">
+            <button
+              onClick={handleReset}
+              className="btn-ghost"
+            >
+              重置
+            </button>
           </div>
         </div>
       </div>

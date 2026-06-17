@@ -9,6 +9,7 @@ import { formatPlateNumber } from '@/utils/format';
 
 interface RecordState {
   records: AccessRecord[];
+  recordsFull: AccessRecord[];
   loading: boolean;
   error: string | null;
   total: number;
@@ -20,6 +21,7 @@ interface RecordState {
     employeeId?: string;
     startDate?: string;
     endDate?: string;
+    status?: string;
   }) => Promise<PaginatedResponse<AccessRecord>>;
 
   createEntryRecord: (plateNumber: string, employeeId?: string) => Promise<AccessRecord | null>;
@@ -33,6 +35,7 @@ export const useRecordStore = create<RecordState>()(
   persist(
     (set, get) => ({
       records: [],
+      recordsFull: [...mockAccessRecords],
       loading: false,
       error: null,
       total: 0,
@@ -41,9 +44,9 @@ export const useRecordStore = create<RecordState>()(
         set({ loading: true });
         await new Promise((resolve) => setTimeout(resolve, 300));
 
-        const { page = 1, pageSize = 10, plateNumber, employeeId, startDate, endDate } = filters;
+        const { page = 1, pageSize = 10, plateNumber, employeeId, startDate, endDate, status } = filters;
         const state = get();
-        let filtered = state.records.length > 0 ? [...state.records] : [...mockAccessRecords];
+        let filtered = [...state.recordsFull];
 
         if (plateNumber) {
           filtered = filtered.filter((r) => r.plateNumber.includes(plateNumber.toUpperCase()));
@@ -57,6 +60,13 @@ export const useRecordStore = create<RecordState>()(
         if (endDate) {
           filtered = filtered.filter((r) => r.entryTime <= endDate + ' 23:59:59');
         }
+        if (status && status !== 'all') {
+          if (status === 'active') {
+            filtered = filtered.filter((r) => !r.exitTime);
+          } else if (status === 'exited') {
+            filtered = filtered.filter((r) => !!r.exitTime);
+          }
+        }
 
         const total = filtered.length;
         const start = (page - 1) * pageSize;
@@ -69,7 +79,7 @@ export const useRecordStore = create<RecordState>()(
       findActiveRecord: (plateNumber: string) => {
         const formattedPlate = formatPlateNumber(plateNumber);
         const state = get();
-        const allRecords = state.records.length > 0 ? state.records : mockAccessRecords;
+        const allRecords = state.recordsFull;
         return allRecords.find((r) => r.plateNumber === formattedPlate && !r.exitTime);
       },
 
@@ -100,6 +110,7 @@ export const useRecordStore = create<RecordState>()(
 
         set((state) => ({
           records: [record, ...state.records],
+          recordsFull: [record, ...state.recordsFull],
           loading: false,
         }));
 
@@ -111,7 +122,7 @@ export const useRecordStore = create<RecordState>()(
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         const state = get();
-        let record = state.records.find((r) => r.recordId === recordId);
+        let record = state.recordsFull.find((r) => r.recordId === recordId);
         
         if (!record) {
           record = mockAccessRecords.find((r) => r.recordId === recordId);
@@ -145,6 +156,9 @@ export const useRecordStore = create<RecordState>()(
           records: state.records.map((r) =>
             r.recordId === recordId ? updatedRecord : r
           ),
+          recordsFull: state.recordsFull.map((r) =>
+            r.recordId === recordId ? updatedRecord : r
+          ),
           loading: false,
         }));
 
@@ -167,16 +181,14 @@ export const useRecordStore = create<RecordState>()(
 
       getRecordById: (id: string) => {
         const state = get();
-        return state.records.find((r) => r.recordId === id) ||
+        return state.recordsFull.find((r) => r.recordId === id) ||
           mockAccessRecords.find((r) => r.recordId === id);
       },
 
       getTodayStats: (employeeId?: string) => {
         const today = new Date().toISOString().split('T')[0];
         const state = get();
-        let todayRecords = state.records.length > 0 
-          ? state.records.filter((r) => r.entryTime.startsWith(today))
-          : mockAccessRecords.filter((r) => r.entryTime.startsWith(today));
+        let todayRecords = state.recordsFull.filter((r) => r.entryTime.startsWith(today));
 
         if (employeeId) {
           todayRecords = todayRecords.filter((r) => r.employeeId === employeeId);
@@ -192,6 +204,7 @@ export const useRecordStore = create<RecordState>()(
       name: 'record-storage',
       partialize: (state) => ({
         records: state.records,
+        recordsFull: state.recordsFull,
       }),
     }
   )

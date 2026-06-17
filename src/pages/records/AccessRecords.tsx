@@ -44,6 +44,7 @@ export default function AccessRecords() {
     plateNumber: '',
     startDate: '',
     endDate: '',
+    status: 'all',
     page: 1,
     pageSize: 10,
   });
@@ -74,6 +75,7 @@ export default function AccessRecords() {
     if (filters.plateNumber) apiFilters.plateNumber = filters.plateNumber;
     if (filters.startDate) apiFilters.startDate = filters.startDate;
     if (filters.endDate) apiFilters.endDate = filters.endDate;
+    if (filters.status && filters.status !== 'all') apiFilters.status = filters.status;
 
     await fetchRecords(apiFilters);
   };
@@ -88,6 +90,7 @@ export default function AccessRecords() {
       plateNumber: '',
       startDate: '',
       endDate: '',
+      status: 'all',
       page: 1,
       pageSize: 10,
     });
@@ -95,7 +98,7 @@ export default function AccessRecords() {
 
   const handleExport = () => {
     if (!currentUser) return;
-    const exportData = filteredData.map(record => ({
+    const exportData = records.map(record => ({
       '记录编号': record.recordId,
       '车牌号': record.plateNumber,
       '员工姓名': record.employeeName || '-',
@@ -133,6 +136,10 @@ export default function AccessRecords() {
         operatorName: currentUser.name,
         operationType: '车辆入场',
         detail: `车牌 ${result.plateNumber} 入场登记`,
+        targetId: result.recordId,
+        targetType: 'accessRecord',
+        resultStatus: 'success',
+        remark: `车辆 ${result.plateNumber} 入场`,
       });
       loadRecords();
     } else {
@@ -169,6 +176,10 @@ export default function AccessRecords() {
         operatorName: currentUser.name,
         operationType: '车辆出场',
         detail: `车牌 ${result.plateNumber} 出场登记${result.expense && result.expense > 0 ? `，费用 ${formatCurrency(result.expense)}` : ''}`,
+        targetId: result.recordId,
+        targetType: 'accessRecord',
+        resultStatus: 'success',
+        remark: `车辆 ${result.plateNumber} 出场${result.expense && result.expense > 0 ? `，费用 ${formatCurrency(result.expense)}` : ''}`,
       });
       loadRecords();
     } else {
@@ -388,7 +399,7 @@ export default function AccessRecords() {
       </div>
 
       <div className="card p-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
               车牌号
@@ -403,6 +414,20 @@ export default function AccessRecords() {
                 className="input pl-10"
               />
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              状态
+            </label>
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value, page: 1 }))}
+              className="input"
+            >
+              <option value="all">全部</option>
+              <option value="active">在场</option>
+              <option value="exited">已出场</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
