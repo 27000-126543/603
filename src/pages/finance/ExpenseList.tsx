@@ -45,7 +45,7 @@ export default function ExpenseList() {
   const [viewExpense, setViewExpense] = useState<Expense | null>(null);
 
   const { currentPage, pageSize, totalPages, goToPage, currentData } = usePagination(expenses, 10);
-  const monthlySummary = getMonthlySummary(filters.month);
+  const monthlySummary = getMonthlySummary(filters.month, !canViewAllRecords ? currentUser?.employeeId : undefined);
   const monthList = getMonthList(12);
 
   useEffect(() => {

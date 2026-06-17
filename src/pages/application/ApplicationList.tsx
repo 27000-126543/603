@@ -85,13 +85,23 @@ export default function ApplicationList() {
   const handleApprove = async () => {
     if (!selectedApp || !currentUser) return;
 
-    await approveApplication(selectedApp.applicationId);
+    const result = await approveApplication(selectedApp.applicationId);
+    
     addLog({
       operatorId: currentUser.employeeId,
       operatorName: currentUser.name,
       operationType: '审批通过',
       detail: `通过通行证申请 ${selectedApp.applicationId}`,
     });
+
+    if (result && result.parkingZoneName && result.parkingSpaceNumber) {
+      addLog({
+        operatorId: currentUser.employeeId,
+        operatorName: currentUser.name,
+        operationType: '分配车位',
+        detail: `分配车位 ${result.parkingZoneName} ${result.parkingSpaceNumber} 给申请 ${selectedApp.applicationId}`,
+      });
+    }
 
     setShowApproveModal(false);
     setSelectedApp(null);

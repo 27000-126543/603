@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Building2,
   Users,
+  Shield,
 } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import { useReportStore } from '@/store/useReportStore';
@@ -32,7 +33,7 @@ import { getLastNDays, getCurrentMonth } from '@/utils/date';
 
 export default function ReportOverview() {
   const { currentUser } = useAuthStore();
-  const { canViewFinance } = usePermission();
+  const { canViewAllRecords } = usePermission();
   const { statistics, loading, fetchStatistics, exportStatisticsReport } = useReportStore();
   const { addLog } = useLogStore();
 
@@ -102,6 +103,19 @@ export default function ReportOverview() {
       detail: '导出统计报告Excel',
     });
   };
+
+  if (!canViewAllRecords) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <Shield size={48} className="mx-auto text-neutral-300 mb-4" />
+          <p className="text-neutral-500 dark:text-neutral-400">
+            您没有权限访问此页面
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || !statistics) {
     return (

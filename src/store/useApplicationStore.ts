@@ -31,7 +31,7 @@ interface ApplicationState {
     employeeId: string,
     data: CreateApplicationRequest
   ) => Promise<{ success: boolean; message: string; data?: Application }>;
-  approveApplication: (id: string) => Promise<void>;
+  approveApplication: (id: string) => Promise<Application | null>;
   rejectApplication: (id: string, reason: string) => Promise<void>;
   renewApplication: (id: string) => Promise<void>;
   getApplicationById: (id: string) => Application | undefined;
@@ -220,10 +220,12 @@ export const useApplicationStore = create<ApplicationState>()(
 
         set((state) => ({
           allApplications: state.allApplications.map((a) =>
-            a.applicationId === id ? { ...a, status: app?.status || 'approved' as const } : a
+            a.applicationId === id ? { ...app } : a
           ),
           loading: false,
         }));
+
+        return app;
       },
 
       rejectApplication: async (id: string, reason: string) => {

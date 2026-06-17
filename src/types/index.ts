@@ -93,6 +93,12 @@ export interface Expense {
   deductionDate: string;
   status: ExpenseStatus;
   salaryMonth?: string;
+  entryTime?: string;
+  exitTime?: string;
+  createTime?: string;
+  deductedTime?: string;
+  exemptReason?: string;
+  exemptTime?: string;
 }
 
 export interface SystemLog {

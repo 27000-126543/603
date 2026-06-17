@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Expense, PaginatedResponse } from '@/types';
 import { mockExpenses, mockAccessRecords } from '@/mock/data';
-import { getCurrentMonth, getCurrentTime, generateId } from '@/utils/format';
+import { getCurrentTime, generateId } from '@/utils/format';
+import { getCurrentMonth } from '@/utils/date';
 
 interface AddExpenseRequest {
   recordId: string;
@@ -69,7 +70,7 @@ export const useFinanceStore = create<FinanceState>()(
           filtered = filtered.filter((e) => e.status === status);
         }
 
-        filtered.sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime());
+        filtered.sort((a, b) => new Date(b.deductionDate).getTime() - new Date(a.deductionDate).getTime());
 
         const total = filtered.length;
         const start = (page - 1) * pageSize;
@@ -84,6 +85,7 @@ export const useFinanceStore = create<FinanceState>()(
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         const salaryMonth = new Date().toISOString().slice(0, 7);
+        const now = getCurrentTime();
 
         const expense: Expense = {
           expenseId: generateId('EXP'),
@@ -93,11 +95,12 @@ export const useFinanceStore = create<FinanceState>()(
           plateNumber: data.plateNumber,
           amount: data.amount,
           overtimeMinutes: data.overtimeMinutes,
+          deductionDate: now.slice(0, 10),
           entryTime: data.entryTime,
           exitTime: data.exitTime,
           salaryMonth,
           status: 'pending',
-          createTime: getCurrentTime(),
+          createTime: now,
         };
 
         mockExpenses.unshift(expense);

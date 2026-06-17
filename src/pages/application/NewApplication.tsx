@@ -13,6 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useApplicationStore } from '@/store/useApplicationStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useLogStore } from '@/store/useLogStore';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { validatePlateNumber, formatPlateNumber } from '@/utils/format';
@@ -40,6 +41,7 @@ export default function NewApplication() {
   const navigate = useNavigate();
   const { currentUser } = useAuthStore();
   const { submitApplication, loading } = useApplicationStore();
+  const { addLog } = useLogStore();
   const [submitResult, setSubmitResult] = useState<{
     success: boolean;
     message: string;
@@ -79,7 +81,23 @@ export default function NewApplication() {
 
     setSubmitResult(result);
 
-    if (result.success) {
+    if (result.success && result.data) {
+      addLog({
+        operatorId: currentUser.employeeId,
+        operatorName: currentUser.name,
+        operationType: '提交申请',
+        detail: `提交通行证申请 ${result.data.applicationId}，车牌号 ${result.data.plateNumber}`,
+      });
+
+      if (result.data.parkingZoneName && result.data.parkingSpaceNumber) {
+        addLog({
+          operatorId: currentUser.employeeId,
+          operatorName: currentUser.name,
+          operationType: '分配车位',
+          detail: `自动分配车位 ${result.data.parkingZoneName} ${result.data.parkingSpaceNumber} 给申请 ${result.data.applicationId}`,
+        });
+      }
+
       setTimeout(() => {
         navigate('/application/my');
       }, 2000);

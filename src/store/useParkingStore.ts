@@ -226,7 +226,7 @@ export const useParkingStore = create<ParkingState>()(
         await new Promise((resolve) => setTimeout(resolve, 500));
 
         const newZone: ParkingZone = {
-          zoneId: `Z${generateId().slice(0, 5).toUpperCase()}`,
+          zoneId: generateId('Z').slice(0, 6).toUpperCase(),
           zoneName: zoneData.zoneName,
           totalSpaces: zoneData.totalSpaces,
           usedSpaces: 0,

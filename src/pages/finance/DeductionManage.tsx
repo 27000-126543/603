@@ -109,7 +109,7 @@ export default function DeductionManage() {
   const handleExempt = async () => {
     if (!selectedExpense || !currentUser || !exemptReason) return;
 
-    await exemptExpense(selectedExpense.expenseId);
+    await exemptExpense(selectedExpense.expenseId, exemptReason);
     addLog({
       operatorId: currentUser.employeeId,
       operatorName: currentUser.name,

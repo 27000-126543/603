@@ -154,7 +154,7 @@ export default function App() {
           <Route
             path="reports/overview"
             element={
-              <ProtectedRoute roles={['admin', 'finance']}>
+              <ProtectedRoute roles={['admin']}>
                 <ReportOverview />
               </ProtectedRoute>
             }
@@ -163,7 +163,7 @@ export default function App() {
           <Route
             path="logs/system"
             element={
-              <ProtectedRoute roles={['admin', 'finance']}>
+              <ProtectedRoute roles={['admin']}>
                 <SystemLog />
               </ProtectedRoute>
             }
