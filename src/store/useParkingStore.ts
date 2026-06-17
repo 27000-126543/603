@@ -31,8 +31,8 @@ interface ParkingState {
 export const useParkingStore = create<ParkingState>()(
   persist(
     (set, get) => ({
-      zones: [],
-      spaces: [],
+      zones: [...mockParkingZones],
+      spaces: [...mockParkingSpaces],
       selectedZoneId: null,
       loading: false,
       error: null,
@@ -40,25 +40,13 @@ export const useParkingStore = create<ParkingState>()(
       fetchZones: async () => {
         set({ loading: true });
         await new Promise((resolve) => setTimeout(resolve, 300));
-        const state = get();
-        if (state.zones.length === 0) {
-          set({ zones: [...mockParkingZones], loading: false });
-        } else {
-          set({ loading: false });
-        }
+        set({ loading: false });
       },
 
       fetchSpaces: async (zoneId?: string) => {
         set({ loading: true });
         await new Promise((resolve) => setTimeout(resolve, 300));
-
-        const state = get();
-        let spaces = state.spaces.length > 0 ? [...state.spaces] : [...mockParkingSpaces];
-        if (zoneId) {
-          spaces = spaces.filter((s) => s.zoneId === zoneId);
-        }
-
-        set({ spaces, selectedZoneId: zoneId || null, loading: false });
+        set({ selectedZoneId: zoneId || null, loading: false });
       },
 
       setSelectedZone: (zoneId: string | null) => {
@@ -110,39 +98,35 @@ export const useParkingStore = create<ParkingState>()(
         await new Promise((resolve) => setTimeout(resolve, 500));
 
         const state = get();
-        let space = state.spaces.find((s) => s.spaceId === data.spaceId);
+        const space = state.spaces.find((s) => s.spaceId === data.spaceId);
         const app = mockApplications.find((a) => a.applicationId === data.applicationId);
 
-        if (!space) {
-          space = mockParkingSpaces.find((s) => s.spaceId === data.spaceId);
+        if (!space || space.status !== 'available') {
+          set({ loading: false, error: space ? '车位已被占用' : '车位不存在' });
+          return { success: false };
         }
 
-        if (space && app) {
-          if (space.status !== 'available') {
-            set({ loading: false, error: '车位已被占用' });
-            return { success: false };
-          }
+        const updatedSpace = {
+          ...space,
+          status: 'occupied' as const,
+          employeeId: app?.employeeId,
+          employeeName: app?.employeeName,
+          plateNumber: app?.plateNumber,
+        };
 
-          const updatedSpace = {
-            ...space,
-            status: 'occupied' as const,
-            employeeId: app.employeeId,
-            employeeName: app.employeeName,
-            plateNumber: app.plateNumber,
-          };
+        set((state) => ({
+          spaces: state.spaces.map((s) =>
+            s.spaceId === data.spaceId ? updatedSpace : s
+          ),
+          zones: state.zones.map((z) =>
+            z.zoneId === data.zoneId
+              ? { ...z, usedSpaces: z.usedSpaces + 1 }
+              : z
+          ),
+          loading: false,
+        }));
 
-          set((state) => ({
-            spaces: state.spaces.map((s) =>
-              s.spaceId === data.spaceId ? updatedSpace : s
-            ),
-            zones: state.zones.map((z) =>
-              z.zoneId === data.zoneId
-                ? { ...z, usedSpaces: Math.min(z.usedSpaces + 1, z.totalSpaces) }
-                : z
-            ),
-            loading: false,
-          }));
-
+        if (app) {
           app.parkingZoneId = data.zoneId;
           app.parkingSpaceId = data.spaceId;
           app.status = 'approved';
@@ -154,12 +138,9 @@ export const useParkingStore = create<ParkingState>()(
             app.spaceType = zone.isFixed ? 'fixed' : 'temporary';
           }
           app.parkingSpaceNumber = updatedSpace.spaceNumber;
-
-          return { success: true, space: updatedSpace };
         }
 
-        set({ loading: false });
-        return { success: false };
+        return { success: true, space: updatedSpace };
       },
 
       releaseSpace: async (spaceId: string) => {
@@ -261,21 +242,86 @@ export const useParkingStore = create<ParkingState>()(
         await new Promise((resolve) => setTimeout(resolve, 500));
 
         let updatedZone: ParkingZone | null = null;
+        let newSpaces: ParkingSpace[] = [];
 
-        set((state) => ({
-          zones: state.zones.map((z) => {
-            if (z.zoneId === zoneId) {
-              updatedZone = { ...z, ...updates };
-              return updatedZone;
+        set((state) => {
+          const currentZone = state.zones.find((z) => z.zoneId === zoneId);
+          if (!currentZone) {
+            return { loading: false };
+          }
+
+          updatedZone = { ...currentZone, ...updates };
+          
+          let updatedZones = state.zones.map((z) =>
+            z.zoneId === zoneId ? updatedZone! : z
+          );
+
+          let updatedSpaces = state.spaces.map((s) =>
+            s.zoneId === zoneId
+              ? { ...s, zoneName: updatedZone!.zoneName }
+              : s
+          );
+
+          if (updates.totalSpaces !== undefined && updates.totalSpaces !== currentZone.totalSpaces) {
+            const oldTotal = currentZone.totalSpaces;
+            const newTotal = updates.totalSpaces;
+
+            if (newTotal > oldTotal) {
+              const addCount = newTotal - oldTotal;
+              const newSpaceList: ParkingSpace[] = [];
+              for (let i = 0; i < addCount; i++) {
+                const spaceNum = oldTotal + i + 1;
+                newSpaceList.push({
+                  spaceId: `${zoneId}-${String(spaceNum).padStart(3, '0')}`,
+                  zoneId: zoneId,
+                  zoneName: updatedZone!.zoneName,
+                  spaceNumber: `${zoneId}${String(spaceNum).padStart(3, '0')}`,
+                  status: 'available' as const,
+                  spaceType: updatedZone!.isFixed ? 'fixed' as const : 'temporary' as const,
+                });
+              }
+              updatedSpaces = [...updatedSpaces, ...newSpaceList];
+              newSpaces = newSpaceList;
+            } else if (newTotal < oldTotal) {
+              const removeCount = oldTotal - newTotal;
+              const zoneSpaces = updatedSpaces.filter((s) => s.zoneId === zoneId);
+              const availableSpaces = zoneSpaces.filter((s) => s.status === 'available');
+              
+              if (availableSpaces.length >= removeCount) {
+                const toRemove = availableSpaces.slice(0, removeCount);
+                const toRemoveIds = new Set(toRemove.map((s) => s.spaceId));
+                updatedSpaces = updatedSpaces.filter((s) => !toRemoveIds.has(s.spaceId));
+              } else {
+                updatedZone = { ...updatedZone!, totalSpaces: oldTotal };
+                updatedZones = updatedZones.map((z) =>
+                  z.zoneId === zoneId ? updatedZone! : z
+                );
+              }
             }
-            return z;
-          }),
-          loading: false,
-        }));
+          }
 
-        const mockZoneIndex = mockParkingZones.findIndex((z) => z.zoneId === zoneId);
-        if (mockZoneIndex >= 0 && updatedZone) {
-          mockParkingZones[mockZoneIndex] = updatedZone;
+          return {
+            zones: updatedZones,
+            spaces: updatedSpaces,
+            loading: false,
+          };
+        });
+
+        if (updatedZone) {
+          const mockZoneIndex = mockParkingZones.findIndex((z) => z.zoneId === zoneId);
+          if (mockZoneIndex >= 0) {
+            mockParkingZones[mockZoneIndex] = updatedZone;
+          }
+
+          mockParkingSpaces.forEach((s) => {
+            if (s.zoneId === zoneId) {
+              s.zoneName = updatedZone!.zoneName;
+            }
+          });
+
+          if (newSpaces.length > 0) {
+            mockParkingSpaces.push(...newSpaces);
+          }
         }
 
         return updatedZone;

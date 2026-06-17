@@ -114,8 +114,8 @@ export const useApplicationStore = create<ApplicationState>()(
         const assignment = assignParkingSpace(
           application,
           employee,
-          parkingState.zones.length > 0 ? parkingState.zones : mockParkingZones,
-          parkingState.spaces.length > 0 ? parkingState.spaces : mockParkingSpaces
+          parkingState.zones,
+          parkingState.spaces
         );
 
         if (assignment.success) {
@@ -132,7 +132,7 @@ export const useApplicationStore = create<ApplicationState>()(
             application.parkingSpaceId = assignment.spaceId;
             application.spaceType = assignment.spaceType;
 
-            const zone = (parkingState.zones.length > 0 ? parkingState.zones : mockParkingZones).find((z) => z.zoneId === assignment.zoneId);
+            const zone = parkingState.zones.find((z) => z.zoneId === assignment.zoneId);
             application.parkingZoneName = zone?.zoneName;
             application.parkingSpaceNumber = assignResult.space.spaceNumber;
           } else {
@@ -170,21 +170,25 @@ export const useApplicationStore = create<ApplicationState>()(
         set({ loading: true });
         await new Promise((resolve) => setTimeout(resolve, 500));
 
-        const app = mockApplications.find((a) => a.applicationId === id);
+        let app = mockApplications.find((a) => a.applicationId === id);
+        if (!app) {
+          app = get().allApplications.find((a) => a.applicationId === id);
+        }
+        
         if (app) {
-          const employee = mockEmployees.find((e) => e.employeeId === app.employeeId);
+          const employee = mockEmployees.find((e) => e.employeeId === app!.employeeId);
           if (employee) {
             const parkingState = useParkingStore.getState();
             const assignment = assignParkingSpace(
-              app,
+              app!,
               employee,
-              parkingState.zones.length > 0 ? parkingState.zones : mockParkingZones,
-              parkingState.spaces.length > 0 ? parkingState.spaces : mockParkingSpaces
+              parkingState.zones,
+              parkingState.spaces
             );
 
             if (assignment.success) {
               const assignResult = await parkingState.assignSpace({
-                applicationId: app.applicationId,
+                applicationId: app!.applicationId,
                 zoneId: assignment.zoneId,
                 spaceId: assignment.spaceId,
               });
@@ -196,13 +200,13 @@ export const useApplicationStore = create<ApplicationState>()(
                 app.parkingSpaceId = assignment.spaceId;
                 app.spaceType = assignment.spaceType;
 
-                const zone = (parkingState.zones.length > 0 ? parkingState.zones : mockParkingZones).find((z) => z.zoneId === assignment.zoneId);
+                const zone = parkingState.zones.find((z) => z.zoneId === assignment.zoneId);
                 app.parkingZoneName = zone?.zoneName;
                 app.parkingSpaceNumber = assignResult.space.spaceNumber;
               } else {
                 app.status = 'waiting';
                 const estimatedWait = await parkingState.findAvailableSpace(
-                  app.employeeId,
+                  app!.employeeId,
                   employee.positionLevel,
                   employee.department
                 );
@@ -225,7 +229,7 @@ export const useApplicationStore = create<ApplicationState>()(
           loading: false,
         }));
 
-        return app;
+        return app || null;
       },
 
       rejectApplication: async (id: string, reason: string) => {

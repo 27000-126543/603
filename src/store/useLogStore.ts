@@ -5,6 +5,7 @@ import { mockSystemLogs, mockNotifications } from '@/mock/data';
 import { generateId, getCurrentTime } from '@/utils/format';
 
 interface LogState {
+  allLogs: SystemLog[];
   logs: SystemLog[];
   notifications: Notification[];
   loading: boolean;
@@ -30,6 +31,7 @@ interface LogState {
 export const useLogStore = create<LogState>()(
   persist(
     (set, get) => ({
+      allLogs: [...mockSystemLogs],
       logs: [...mockSystemLogs],
       notifications: [],
       loading: false,
@@ -40,12 +42,12 @@ export const useLogStore = create<LogState>()(
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         const { page = 1, pageSize = 10, operatorId, operationType, startDate, endDate } = filters;
-        let filtered = [...get().logs];
+        let filtered = [...get().allLogs];
 
         if (operatorId) {
           filtered = filtered.filter((l) => l.operatorId === operatorId);
         }
-        if (operationType) {
+        if (operationType && operationType !== 'all') {
           filtered = filtered.filter((l) => l.operationType === operationType);
         }
         if (startDate) {
@@ -70,6 +72,7 @@ export const useLogStore = create<LogState>()(
           operateTime: getCurrentTime(),
         };
         set((state) => ({
+          allLogs: [log, ...state.allLogs],
           logs: [log, ...state.logs],
         }));
       },
@@ -122,7 +125,7 @@ export const useLogStore = create<LogState>()(
     }),
     {
       name: 'log-storage',
-      partialize: (state) => ({ logs: state.logs }),
+      partialize: (state) => ({ allLogs: state.allLogs, logs: state.logs }),
     }
   )
 );
